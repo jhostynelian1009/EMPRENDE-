@@ -1,4 +1,4 @@
-import { Question, Option } from './types';
+import { Question } from './types';
 
 /**
  * Shuffles an array in place using the Fisher-Yates algorithm.

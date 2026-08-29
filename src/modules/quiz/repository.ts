@@ -4,11 +4,13 @@ import { QuizState } from './types';
 const QUIZ_STORAGE_KEY = '@emprende_plus:quiz';
 
 export const initialQuizState: QuizState = {
+  schemaVersion: 1,
   status: 'inProgress',
   answers: {},
   score: null,
   approved: null,
   completedAt: null,
+  updatedAt: null,
 };
 
 /**
@@ -16,7 +18,8 @@ export const initialQuizState: QuizState = {
  */
 export async function saveQuizState(state: QuizState): Promise<void> {
   try {
-    const jsonValue = JSON.stringify(state);
+    const toSave: QuizState = { ...state, updatedAt: new Date().toISOString() };
+    const jsonValue = JSON.stringify(toSave);
     await AsyncStorage.setItem(QUIZ_STORAGE_KEY, jsonValue);
   } catch (e) {
     console.error('Error al guardar el estado del quiz', e);
