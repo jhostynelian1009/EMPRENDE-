@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -55,22 +56,27 @@ export default function ResultadoScreen() {
     })();
   }, []);
 
+  const doRepeat = async () => {
+    await clearQuizState();
+    router.replace('/quiz');
+  };
+
   const handleRepeat = () => {
-    Alert.alert(
-      'Repetir quiz',
-      '¿Deseas iniciar un nuevo intento? Tu resultado anterior será reemplazado al completar el nuevo quiz.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Repetir',
-          style: 'destructive',
-          onPress: async () => {
-            await clearQuizState();
-            router.replace('/quiz');
-          },
-        },
-      ],
-    );
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        '¿Deseas iniciar un nuevo intento? Tu resultado anterior será reemplazado al completar el nuevo quiz.',
+      );
+      if (confirmed) doRepeat();
+    } else {
+      Alert.alert(
+        'Repetir quiz',
+        '¿Deseas iniciar un nuevo intento? Tu resultado anterior será reemplazado al completar el nuevo quiz.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Repetir', style: 'destructive', onPress: doRepeat },
+        ],
+      );
+    }
   };
 
   if (loading || !state) {
