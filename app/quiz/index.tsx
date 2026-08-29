@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -134,44 +135,52 @@ export default function QuizScreen() {
   const answeredCount = Object.keys(answers).length;
   const allAnswered = answeredCount === TOTAL_QUESTIONS;
 
+  const finishQuiz = useCallback(async () => {
+    const score = calculateQuizScore(QUESTION_BANK, answers);
+    const approved = score >= PASSING_SCORE;
+    const now = new Date().toISOString();
+
+    await saveQuizState({
+      schemaVersion: 1,
+      status: 'completed',
+      answers,
+      score,
+      approved,
+      completedAt: now,
+      updatedAt: null,
+    });
+
+    router.replace('/quiz/resultado');
+  }, [answers]);
+
   const handleFinish = useCallback(() => {
     if (!allAnswered) {
-      Alert.alert(
-        'Quiz incompleto',
-        'Responde las 10 preguntas antes de finalizar.',
-      );
+      if (Platform.OS === 'web') {
+        window.alert('Responde las 10 preguntas antes de finalizar.');
+      } else {
+        Alert.alert('Quiz incompleto', 'Responde las 10 preguntas antes de finalizar.');
+      }
       return;
     }
 
-    Alert.alert(
-      'Finalizar quiz',
-      '¿Estás seguro de que deseas finalizar? No podrás cambiar tus respuestas.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Finalizar',
-          style: 'destructive',
-          onPress: async () => {
-            const score = calculateQuizScore(QUESTION_BANK, answers);
-            const approved = score >= PASSING_SCORE;
-            const now = new Date().toISOString();
-
-            await saveQuizState({
-              schemaVersion: 1,
-              status: 'completed',
-              answers,
-              score,
-              approved,
-              completedAt: now,
-              updatedAt: null,
-            });
-
-            router.replace('/quiz/resultado');
-          },
-        },
-      ],
-    );
-  }, [allAnswered, answers]);
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        '¿Estás seguro de que deseas finalizar? No podrás cambiar tus respuestas.',
+      );
+      if (confirmed) {
+        finishQuiz();
+      }
+    } else {
+      Alert.alert(
+        'Finalizar quiz',
+        '¿Estás seguro de que deseas finalizar? No podrás cambiar tus respuestas.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Finalizar', style: 'destructive', onPress: finishQuiz },
+        ],
+      );
+    }
+  }, [allAnswered, finishQuiz]);
 
   /* ── Render helpers ── */
 
