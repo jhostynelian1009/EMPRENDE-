@@ -21,6 +21,14 @@ export default function HomeScreen() {
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
       </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/quiz" asChild>
+          <ThemedText type="subtitle" style={{ color: '#F97316', padding: 16, backgroundColor: '#FFEDD5', borderRadius: 8, textAlign: 'center', overflow: 'hidden' }}>
+            🚀 IR AL QUIZ (Acceso Directo QA)
+          </ThemedText>
+        </Link>
+      </ThemedView>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
