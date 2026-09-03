@@ -1,40 +1,63 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BusinessIdea } from '../domain/BusinessIdea';
+import {
+  BusinessIdea,
+  hasUnknownSchemaVersion,
+  IDEA_STORAGE_KEY,
+  isBusinessIdea,
+  MiIdeaReadResult,
+} from '../domain/BusinessIdea';
 
-const STORAGE_KEY = '@emprende_plus:idea';
+export async function loadBusinessIdea(): Promise<MiIdeaReadResult> {
+  try {
+    const raw = await AsyncStorage.getItem(IDEA_STORAGE_KEY);
+    if (raw === null || raw.trim() === '') {
+      return { status: 'empty', data: null };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return {
+        status: 'corrupt',
+        data: null,
+        error: 'JSON malformado en almacenamiento.',
+      };
+    }
+
+    if (hasUnknownSchemaVersion(parsed)) {
+      return {
+        status: 'unknown_schema',
+        data: null,
+        error: 'Versión de schema desconocida en almacenamiento.',
+      };
+    }
+
+    if (isBusinessIdea(parsed)) {
+      return { status: 'valid', data: parsed };
+    }
+
+    return {
+      status: 'corrupt',
+      data: null,
+      error: 'Estructura o tipos de datos de idea inválidos.',
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Error de lectura en almacenamiento.';
+    return { status: 'storage_error', data: null, error: errorMessage };
+  }
+}
 
 export async function getBusinessIdea(): Promise<BusinessIdea | null> {
-  try {
-    const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!jsonValue) {
-      return null;
-    }
-    
-    const parsed = JSON.parse(jsonValue);
-    
-    // Validación estructural básica
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      parsed.schemaVersion === 1 &&
-      typeof parsed.nombreNegocio === 'string' &&
-      typeof parsed.problema === 'string' &&
-      typeof parsed.solucion === 'string' &&
-      typeof parsed.publicoObjetivo === 'string' &&
-      typeof parsed.recursosNecesarios === 'string' &&
-      typeof parsed.updatedAt === 'string'
-    ) {
-      return parsed as BusinessIdea;
-    }
-    
-    return null;
-  } catch {
-    // Falla segura: devolvemos null y permitimos que la pantalla quede utilizable
-    return null;
+  const result = await loadBusinessIdea();
+  if (result.status === 'valid') {
+    return result.data;
   }
+  return null;
 }
 
 export async function saveBusinessIdea(idea: BusinessIdea): Promise<void> {
   const jsonValue = JSON.stringify(idea);
-  await AsyncStorage.setItem(STORAGE_KEY, jsonValue);
+  await AsyncStorage.setItem(IDEA_STORAGE_KEY, jsonValue);
 }

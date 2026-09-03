@@ -1,4 +1,5 @@
 export { RETOS_STORAGE_KEY } from './storage/retosRepository';
+export const RETOS_SCHEMA_VERSION = 1;
 
 export type {
   ChallengeId,

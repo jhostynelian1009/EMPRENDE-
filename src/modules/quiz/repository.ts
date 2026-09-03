@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { QuizState } from './types';
-
-const QUIZ_STORAGE_KEY = '@emprende_plus:quiz';
+import {
+  hasUnknownSchemaVersion,
+  isQuizSnapshot,
+  QUIZ_STORAGE_KEY,
+} from './guards';
+import { QuizReadResult, QuizSnapshot, QuizState } from './types';
 
 export const initialQuizState: QuizState = {
   schemaVersion: 1,
@@ -13,42 +16,71 @@ export const initialQuizState: QuizState = {
   updatedAt: null,
 };
 
-/**
- * Guarda el estado actual del Quiz en AsyncStorage.
- */
-export async function saveQuizState(state: QuizState): Promise<void> {
+export async function loadQuizSnapshot(): Promise<QuizReadResult> {
   try {
-    const toSave: QuizState = { ...state, updatedAt: new Date().toISOString() };
-    const jsonValue = JSON.stringify(toSave);
-    await AsyncStorage.setItem(QUIZ_STORAGE_KEY, jsonValue);
-  } catch (e) {
-    console.error('Error al guardar el estado del quiz', e);
+    const raw = await AsyncStorage.getItem(QUIZ_STORAGE_KEY);
+    if (raw === null || raw.trim() === '') {
+      return { status: 'empty', snapshot: null };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return {
+        status: 'corrupt',
+        snapshot: null,
+        error: 'JSON malformado en almacenamiento.',
+      };
+    }
+
+    if (hasUnknownSchemaVersion(parsed)) {
+      return {
+        status: 'unknown_schema',
+        snapshot: null,
+        error: 'Versión de schema desconocida en almacenamiento.',
+      };
+    }
+
+    if (isQuizSnapshot(parsed)) {
+      return { status: 'valid', snapshot: parsed };
+    }
+
+    return {
+      status: 'corrupt',
+      snapshot: null,
+      error: 'Estructura o datos de quiz inválidos en almacenamiento.',
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Error de lectura en almacenamiento.';
+    return { status: 'storage_error', snapshot: null, error: errorMessage };
   }
 }
 
-/**
- * Recupera el estado del Quiz desde AsyncStorage.
- * Si no existe, retorna el estado inicial.
- */
 export async function loadQuizState(): Promise<QuizState> {
-  try {
-    const jsonValue = await AsyncStorage.getItem(QUIZ_STORAGE_KEY);
-    if (jsonValue != null) {
-      return JSON.parse(jsonValue) as QuizState;
-    }
-  } catch (e) {
-    console.error('Error al cargar el estado del quiz', e);
+  const result = await loadQuizSnapshot();
+  if (result.status === 'valid' && result.snapshot) {
+    return result.snapshot;
   }
   return initialQuizState;
 }
 
-/**
- * Reinicia completamente el intento de Quiz.
- */
-export async function clearQuizState(): Promise<void> {
-  try {
-    await saveQuizState(initialQuizState);
-  } catch (e) {
-    console.error('Error al reiniciar el estado del quiz', e);
+export async function saveQuizState(state: QuizState): Promise<void> {
+  const snapshot: QuizSnapshot = {
+    ...state,
+    schemaVersion: 1,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (!isQuizSnapshot(snapshot)) {
+    throw new Error('Intento de guardar un estado de Quiz inválido.');
   }
+
+  const jsonValue = JSON.stringify(snapshot);
+  await AsyncStorage.setItem(QUIZ_STORAGE_KEY, jsonValue);
+}
+
+export async function clearQuizState(): Promise<void> {
+  await AsyncStorage.removeItem(QUIZ_STORAGE_KEY);
 }
