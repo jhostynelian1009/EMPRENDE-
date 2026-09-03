@@ -1,58 +1,8 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 
-import { calculatorTheme as theme } from '../theme';
-
-type ActionButtonProps = {
-  label: string;
-  onPress: () => void;
-  variant?: 'primary' | 'secondary';
-  disabled?: boolean;
-  loading?: boolean;
-  accessibilityHint?: string;
-};
-
-function ActionButton({
-  label,
-  onPress,
-  variant = 'primary',
-  disabled = false,
-  loading = false,
-  accessibilityHint,
-}: ActionButtonProps) {
-  const isPrimary = variant === 'primary';
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled: disabled || loading }}
-      disabled={disabled || loading}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        isPrimary ? styles.primary : styles.secondary,
-        (disabled || loading) && styles.disabled,
-        pressed && !disabled && !loading && styles.pressed,
-      ]}>
-      {loading ? (
-        <ActivityIndicator
-          color={isPrimary ? theme.color.surface : theme.color.primaryDark}
-        />
-      ) : (
-        <Text style={isPrimary ? styles.primaryLabel : styles.secondaryLabel}>
-          {label}
-        </Text>
-      )}
-    </Pressable>
-  );
-}
+import { PrimaryButton, SecondaryButton } from '@/src/components/ui';
+import { spacing } from '@/src/theme';
 
 type CalculatorActionsProps = {
   phase: 'form' | 'result';
@@ -76,8 +26,8 @@ export function CalculatorActions({
   if (phase === 'form') {
     return (
       <View style={styles.group}>
-        <ActionButton
-          label="Calcular"
+        <PrimaryButton
+          title="Calcular"
           onPress={onCalculate}
           loading={saving}
           accessibilityHint="Calcula costos, precio y recuperación inicial"
@@ -89,59 +39,25 @@ export function CalculatorActions({
   return (
     <View style={styles.group}>
       {saveError ? (
-        <ActionButton
-          label="Reintentar guardado"
+        <PrimaryButton
+          title="Reintentar guardado"
           onPress={onRetrySave}
           loading={saving}
           accessibilityHint="Vuelve a guardar el último cálculo válido"
         />
       ) : null}
-      <ActionButton
-        label="Modificar datos"
-        variant="secondary"
+      <SecondaryButton
+        title="Modificar datos"
         onPress={onModify}
       />
-      <ActionButton label="Limpiar" variant="secondary" onPress={onClear} />
+      <SecondaryButton title="Limpiar" onPress={onClear} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   group: {
-    gap: theme.space.md,
-    marginBottom: theme.space.xxl,
-  },
-  button: {
-    minHeight: 48,
-    borderRadius: theme.radius.field,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.space.lg,
-  },
-  primary: {
-    backgroundColor: theme.color.primaryDark,
-  },
-  secondary: {
-    backgroundColor: theme.color.surface,
-    borderWidth: 1,
-    borderColor: theme.color.primaryDark,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  primaryLabel: {
-    color: theme.color.surface,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '600',
-  },
-  secondaryLabel: {
-    color: theme.color.primaryDark,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '600',
+    gap: spacing.md,
+    marginBottom: spacing.xxl,
   },
 });

@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import React from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,35 +11,39 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Screen } from '@/src/components/ui/Screen';
 import { CalculatorActions } from '@/src/modules/calculadora/components/CalculatorActions';
 import { CalculatorForm } from '@/src/modules/calculadora/components/CalculatorForm';
 import { CalculatorResults } from '@/src/modules/calculadora/components/CalculatorResults';
 import { ResultInterpretation } from '@/src/modules/calculadora/components/ResultInterpretation';
 import { EDUCATIONAL_NOTICE, SCREEN_INTRO } from '@/src/modules/calculadora/domain';
 import { useCalculator } from '@/src/modules/calculadora/hooks/useCalculator';
-import { calculatorTheme as theme } from '@/src/modules/calculadora/theme';
+import { colors, radii, spacing, typography } from '@/src/theme';
 
 export default function CalculadoraScreen() {
   const calculator = useCalculator();
 
   const requestClear = () => {
-    if (!calculator.persisted) {
+    if (!calculator.hasContentToClear) {
       calculator.clearLocal();
       return;
     }
 
     Alert.alert(
       'Limpiar cálculo',
-      'Se borrará el último cálculo guardado. Esta acción no se puede deshacer.',
+      'Se borrarán los datos ingresados y el cálculo guardado. Esta acción no se puede deshacer.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Limpiar',
           style: 'destructive',
           onPress: () => {
-            void calculator.clearPersisted();
+            if (calculator.persisted) {
+              void calculator.clearPersisted();
+            } else {
+              calculator.clearLocal();
+            }
           },
         },
       ],
@@ -46,13 +51,13 @@ export default function CalculadoraScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <Screen style={styles.safe}>
       <Stack.Screen
         options={{
           title: 'Calculadora',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: theme.color.background },
-          headerTintColor: theme.color.secondary,
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.secondary,
           headerTitleStyle: { fontWeight: '700' },
         }}
       />
@@ -62,7 +67,7 @@ export default function CalculadoraScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
         {calculator.phase === 'loading' ? (
           <View style={styles.loading} accessibilityLabel="Cargando cálculo">
-            <ActivityIndicator color={theme.color.primaryDark} />
+            <ActivityIndicator color={colors.primaryDark} />
             <Text style={styles.loadingText}>Cargando cálculo…</Text>
           </View>
         ) : (
@@ -137,80 +142,72 @@ export default function CalculadoraScreen() {
           </ScrollView>
         )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: theme.color.background,
+    backgroundColor: colors.background,
   },
   flex: {
     flex: 1,
   },
   content: {
-    paddingHorizontal: theme.space.xl,
-    paddingTop: theme.space.lg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: 48,
   },
   intro: {
-    color: theme.color.text,
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: theme.space.md,
+    ...typography.body,
+    color: colors.text,
+    marginBottom: spacing.md,
   },
   notice: {
-    backgroundColor: theme.color.primaryLight,
-    borderRadius: theme.radius.card,
-    padding: theme.space.lg,
-    marginBottom: theme.space.xxl,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radii.card,
+    padding: spacing.lg,
+    marginBottom: spacing.xxl,
   },
   noticeText: {
-    color: theme.color.text,
-    fontSize: 14,
-    lineHeight: 20,
+    ...typography.bodySmall,
+    color: colors.text,
   },
   recoverable: {
-    backgroundColor: theme.color.surface,
-    borderRadius: theme.radius.card,
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: theme.color.warning,
-    padding: theme.space.lg,
-    marginBottom: theme.space.xxl,
+    borderColor: colors.warning,
+    padding: spacing.lg,
+    marginBottom: spacing.xxl,
   },
   recoverableTitle: {
-    color: theme.color.secondary,
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
-    marginBottom: theme.space.sm,
+    ...typography.h3,
+    color: colors.secondary,
+    marginBottom: spacing.sm,
   },
   recoverableText: {
-    color: theme.color.text,
-    fontSize: 14,
-    lineHeight: 20,
+    ...typography.bodySmall,
+    color: colors.text,
   },
   recoverableAction: {
     minHeight: 48,
     justifyContent: 'center',
-    marginTop: theme.space.sm,
+    marginTop: spacing.sm,
   },
   recoverableActionLabel: {
-    color: theme.color.primaryDark,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '600',
+    ...typography.label,
+    color: colors.primaryDark,
   },
   loading: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.space.md,
+    gap: spacing.md,
   },
   loadingText: {
-    color: theme.color.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    ...typography.bodySmall,
+    color: colors.textMuted,
   },
 });

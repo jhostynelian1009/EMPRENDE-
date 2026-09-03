@@ -21,7 +21,7 @@ export function calculateResults(inputs: CalculatorInputs): CalculatorResults {
   const gananciaOperativa = ingresosEstimados - costoTotal;
   const resultadoInicial = gananciaOperativa - inversionInicial;
 
-  return {
+  const results: CalculatorResults = {
     costoVariableTotal,
     costoTotal,
     costoUnitario,
@@ -30,4 +30,12 @@ export function calculateResults(inputs: CalculatorInputs): CalculatorResults {
     gananciaOperativa,
     resultadoInicial,
   };
+
+  for (const [key, value] of Object.entries(results)) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      throw new Error(`El cálculo generó un resultado no finito en ${key}.`);
+    }
+  }
+
+  return results;
 }
