@@ -1,0 +1,36 @@
+export const calculatorTheme = {
+  color: {
+    primary: '#F97316',
+    primaryDark: '#C2410C',
+    primaryLight: '#FFEDD5',
+    secondary: '#17365D',
+    accent: '#0F766E',
+    background: '#FFF7ED',
+    surface: '#FFFFFF',
+    text: '#1F2937',
+    textMuted: '#6B7280',
+    border: '#E5E7EB',
+    success: '#15803D',
+    warning: '#B45309',
+    error: '#B91C1C',
+  },
+  space: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    xxl: 24,
+  },
+  radius: {
+    field: 12,
+    card: 16,
+  },
+  shadow: {
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+} as const;
