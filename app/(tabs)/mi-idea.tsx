@@ -1,17 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-import { useEffect, useMemo, useRef } from 'react';
-import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-=======
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   StyleSheet, 
@@ -23,7 +9,6 @@ import {
   SafeAreaView,
   TextInput,
   Alert
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -38,61 +23,13 @@ import { MiIdeaErrors, BusinessIdea } from '@/src/modules/miIdea/domain/Business
 import { getBusinessIdea, saveBusinessIdea } from '@/src/modules/miIdea/data/repository';
 
 export default function MiIdeaScreen() {
-<<<<<<< HEAD
-  const {
-    form,
-    errors,
-    isLoading,
-    isSaving,
-    readError,
-    saveError,
-    savedAt,
-    statusText,
-    loadIdea,
-    updateField,
-    submit,
-  } = useMiIdea();
-=======
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useNavigation } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
-} from 'react-native';
-
-import { getBusinessIdea, saveBusinessIdea } from '@/src/modules/miIdea/data/repository';
-import { BusinessIdea, MiIdeaErrors } from '@/src/modules/miIdea/domain/BusinessIdea';
-import { normalizeText, validateMiIdea, validateSingleField } from '@/src/modules/miIdea/domain/validators';
-import { ContentCard } from '@/src/modules/miIdea/presentation/components/ContentCard';
-import { PrimaryButton } from '@/src/modules/miIdea/presentation/components/PrimaryButton';
-import { TextField } from '@/src/modules/miIdea/presentation/components/TextField';
-import { MiIdeaColors } from '@/src/modules/miIdea/presentation/theme/colors';
-
-export default function MiIdeaScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
-
-=======
   const tabBarHeight = useBottomTabBarHeight();
   
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
   const [nombre, setNombre] = useState('');
   const [problema, setProblema] = useState('');
   const [solucion, setSolucion] = useState('');
   const [publico, setPublico] = useState('');
   const [recursos, setRecursos] = useState('');
-<<<<<<< HEAD
->>>>>>> Stashed changes
-=======
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
 
   // Snapshot del último estado guardado
   const [snapshot, setSnapshot] = useState({
@@ -128,153 +65,6 @@ export default function MiIdeaScreen() {
         setPublico(idea.publicoObjetivo);
         setRecursos(idea.recursosNecesarios);
 
-<<<<<<< HEAD
-  useEffect(() => {
-<<<<<<< Updated upstream
-    const firstInvalid = Object.keys(errors)[0] as keyof typeof form | undefined;
-    if (!firstInvalid) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      const ref = inputRefs.current[firstInvalid];
-      if (ref) {
-        ref.focus();
-      }
-    }, 80);
-
-    return () => clearTimeout(timeout);
-  }, [errors, form]);
-
-  const formattedDate = useMemo(() => {
-    if (!savedAt) {
-      return 'Aún no has guardado tu idea.';
-=======
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!isDirty) {
-        return;
-      }
-
-      e.preventDefault();
-
-      if (Platform.OS === 'web') {
-        const confirmDiscard = window.confirm('Tienes cambios que aún no has guardado. ¿Deseas salir de todas formas?');
-        if (confirmDiscard) {
-          navigation.dispatch(e.data.action);
-        }
-      } else {
-        Alert.alert(
-          'Cambios sin guardar',
-          'Tienes cambios que aún no has guardado. ¿Deseas salir de todas formas?',
-          [
-            { text: 'Seguir editando', style: 'cancel', onPress: () => { } },
-            {
-              text: 'Salir sin guardar',
-              style: 'destructive',
-              onPress: () => navigation.dispatch(e.data.action)
-            }
-          ]
-        );
-      }
-    });
-
-    return unsubscribe;
-  }, [navigation, isDirty]);
-
-  const handleChange = (field: keyof MiIdeaErrors, value: string) => {
-    // 1. Actualizar el estado correspondiente
-    switch (field) {
-      case 'nombreNegocio': setNombre(value); break;
-      case 'problema': setProblema(value); break;
-      case 'solucion': setSolucion(value); break;
-      case 'publicoObjetivo': setPublico(value); break;
-      case 'recursosNecesarios': setRecursos(value); break;
-    }
-
-    // 2. Si el campo tenía un error, revalidarlo de inmediato
-    if (errors[field]) {
-      const errorMsg = validateSingleField(field, value);
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        if (errorMsg) {
-          newErrors[field] = errorMsg;
-        } else {
-          delete newErrors[field];
-        }
-        return newErrors;
-      });
-    }
-  };
-
-  const handleSave = async () => {
-    setSuccessMessage('');
-    setSaveError('');
-
-    // Normalizar
-    const normNombre = normalizeText(nombre);
-    const normProblema = normalizeText(problema);
-    const normSolucion = normalizeText(solucion);
-    const normPublico = normalizeText(publico);
-    const normRecursos = normalizeText(recursos);
-
-    // Validar todos los campos usando las funciones puras
-    const newErrors = validateMiIdea(normNombre, normProblema, normSolucion, normPublico, normRecursos);
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length > 0) {
-      // Enfocar el primer error encontrado respetando el orden del formulario
-      if (newErrors.nombreNegocio) {
-        nombreRef.current?.focus();
-      } else if (newErrors.problema) {
-        problemaRef.current?.focus();
-      } else if (newErrors.solucion) {
-        solucionRef.current?.focus();
-      } else if (newErrors.publicoObjetivo) {
-        publicoRef.current?.focus();
-      } else if (newErrors.recursosNecesarios) {
-        recursosRef.current?.focus();
-      }
-      return;
-    }
-
-    setIsSaving(true);
-
-    const ideaToSave: BusinessIdea = {
-      schemaVersion: 1,
-      nombreNegocio: normNombre,
-      problema: normProblema,
-      solucion: normSolucion,
-      publicoObjetivo: normPublico,
-      recursosNecesarios: normRecursos,
-      updatedAt: new Date().toISOString(),
-    };
-
-    try {
-      await saveBusinessIdea(ideaToSave);
-
-      // Actualizar a los valores normalizados (sin espacios extra)
-      setNombre(normNombre);
-      setProblema(normProblema);
-      setSolucion(normSolucion);
-      setPublico(normPublico);
-      setRecursos(normRecursos);
-
-      // Actualizar el snapshot para limpiar isDirty
-      setSnapshot({
-        nombreNegocio: normNombre,
-        problema: normProblema,
-        solucion: normSolucion,
-        publicoObjetivo: normPublico,
-        recursosNecesarios: normRecursos
-      });
-
-      setSuccessMessage('Tu idea se guardó correctamente.');
-    } catch {
-      setSaveError('No pudimos guardar los cambios. Inténtalo nuevamente.');
-    } finally {
-      setIsSaving(false);
->>>>>>> Stashed changes
-=======
         setSnapshot({
           nombreNegocio: idea.nombreNegocio,
           problema: idea.problema,
@@ -284,7 +74,6 @@ export default function MiIdeaScreen() {
         });
       }
       setIsLoading(false);
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
     }
     preload();
   }, []);
@@ -427,44 +216,12 @@ export default function MiIdeaScreen() {
   };
 
   return (
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={90}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Mi Idea</Text>
-          <Text style={styles.status}>{statusText}</Text>
-          {savedAt ? (
-            <Text style={styles.date}>Guardado: {formattedDate}</Text>
-          ) : (
-            <Text style={styles.date}>Aún no has guardado tu idea.</Text>
-          )}
-        </View>
-
-        {readError ? (
-          <View style={styles.noticeError}>
-            <Text style={styles.noticeText}>No pudimos cargar tu idea. Intenta de nuevo.</Text>
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => void loadIdea()}>
-              <Text style={styles.secondaryButtonText}>Reintentar</Text>
-            </TouchableOpacity>
-=======
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoiding}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-=======
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView 
         style={styles.keyboardAvoiding} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView 
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
           contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}
           keyboardShouldPersistTaps="handled"
         >
@@ -474,10 +231,6 @@ export default function MiIdeaScreen() {
             <Text style={styles.subtitle}>
               Convierte una necesidad en una propuesta de negocio clara y estructurada.
             </Text>
-<<<<<<< HEAD
->>>>>>> Stashed changes
-=======
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
           </View>
 
           {/* Tarjeta Introductoria */}
@@ -505,19 +258,6 @@ export default function MiIdeaScreen() {
             </View>
           ) : null}
 
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-        <TouchableOpacity
-          style={[styles.primaryButton, isSaving ? styles.primaryButtonDisabled : null]}
-          onPress={() => void handleSubmit()}
-          disabled={isSaving}>
-          <Text style={styles.primaryButtonText}>{isSaving ? 'Guardando...' : 'Guardar idea'}</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
-=======
-=======
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
           {/* Formulario */}
           <View style={styles.formContainer}>
             <TextField
@@ -573,15 +313,9 @@ export default function MiIdeaScreen() {
 
           {/* Botón Guardar */}
           <View style={styles.buttonContainer}>
-<<<<<<< HEAD
-            <PrimaryButton
-              title="Guardar mi idea"
-              onPress={handleSave}
-=======
             <PrimaryButton 
               title="Guardar mi idea" 
               onPress={handleSave} 
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
               loading={isSaving}
             />
           </View>
@@ -589,10 +323,6 @@ export default function MiIdeaScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
-<<<<<<< HEAD
->>>>>>> Stashed changes
-=======
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
   );
 }
 
@@ -639,12 +369,6 @@ const styles = StyleSheet.create({
   introTextContainer: {
     flex: 1,
   },
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
-  errorContainer: {
-    backgroundColor: MiIdeaColors.error + '1A',
-=======
   introTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -679,7 +403,6 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     backgroundColor: MiIdeaColors.error + '1A', 
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
     borderColor: MiIdeaColors.error,
     borderWidth: 1,
     padding: 16,
@@ -692,8 +415,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   }
-<<<<<<< HEAD
->>>>>>> Stashed changes
-=======
->>>>>>> efc6cb34c0e44541333d066a00a05ae89f1183d7
 });
