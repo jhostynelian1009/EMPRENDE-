@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from '@/src/storage';
 
 export const CALCULATOR_STORAGE_KEY = STORAGE_KEYS.calculadora;
+export const CALCULATOR_SCHEMA_VERSION = 1;
 
 export type {
   CalculatorInputs,
