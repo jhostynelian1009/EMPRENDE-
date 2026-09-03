@@ -122,9 +122,25 @@ export function useCalculator() {
       return;
     }
 
-    const results = calculateResults(validation.inputs);
-    const snapshot = createSnapshot(validation.inputs, results);
-    void persistSnapshot(snapshot);
+    try {
+      const results = calculateResults(validation.inputs);
+      const snapshot = createSnapshot(validation.inputs, results);
+      void persistSnapshot(snapshot);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo realizar el cálculo con los valores ingresados.';
+      setState((current) => ({
+        ...current,
+        phase: 'form',
+        errors: {
+          ...current.errors,
+          margenPorcentaje: message,
+        },
+        firstErrorField: 'margenPorcentaje',
+      }));
+    }
   }, [persistSnapshot, state.values]);
 
   const retrySave = useCallback(() => {
@@ -170,8 +186,17 @@ export function useCalculator() {
     setState((current) => ({ ...current, firstErrorField: null }));
   }, []);
 
+  const hasEnteredValues = Object.values(state.values).some(
+    (v) => typeof v === 'string' && v.trim() !== '',
+  );
+  const hasResults = state.phase === 'result' || state.snapshot !== null;
+  const hasContentToClear = hasEnteredValues || hasResults || state.persisted;
+
   return {
     ...state,
+    hasEnteredValues,
+    hasResults,
+    hasContentToClear,
     load,
     updateField,
     calculate,

@@ -1,11 +1,14 @@
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+
+import { ContentCard } from '@/src/components/ui/ContentCard';
+import { colors, spacing, typography } from '@/src/theme';
 
 import {
   RESULT_LABELS,
   formatMoney,
   type CalculatorResults as Results,
 } from '../domain';
-import { calculatorTheme as theme } from '../theme';
 
 const RESULT_ORDER = [
   'costoVariableTotal',
@@ -23,7 +26,7 @@ type CalculatorResultsProps = {
 
 export function CalculatorResults({ results }: CalculatorResultsProps) {
   return (
-    <View style={styles.card} accessibilityRole="summary">
+    <ContentCard style={styles.card} accessibilityLabel="Resumen de resultados">
       <Text style={styles.title}>Resumen de resultados</Text>
       {RESULT_ORDER.map((key) => (
         <View key={key} style={styles.row}>
@@ -31,44 +34,35 @@ export function CalculatorResults({ results }: CalculatorResultsProps) {
           <Text style={styles.value}>{formatMoney(results[key])}</Text>
         </View>
       ))}
-    </View>
+    </ContentCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.color.surface,
-    borderRadius: theme.radius.card,
-    padding: theme.space.lg,
-    marginBottom: theme.space.xxl,
-    ...theme.shadow,
+    marginBottom: spacing.xxl,
   },
   title: {
-    color: theme.color.secondary,
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: '600',
-    marginBottom: theme.space.lg,
+    ...typography.h3,
+    color: colors.secondary,
+    marginBottom: spacing.lg,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: theme.space.md,
-    paddingVertical: theme.space.sm,
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.color.border,
+    borderBottomColor: colors.border,
   },
   label: {
     flex: 1,
-    color: theme.color.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    ...typography.bodySmall,
+    color: colors.textMuted,
   },
   value: {
-    color: theme.color.text,
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
+    ...typography.label,
+    color: colors.text,
   },
 });
