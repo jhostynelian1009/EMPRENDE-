@@ -1,12 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { MiProyectoViewModel, UseMiProyectoResult } from '../domain/types';
 import {
   calculateProgress,
   determineGlobalStatus,
   determineNextAction,
   getLatestIsoDate,
-} from '../domain/validation';
+} from '../domain/projectSummary';
+import { MiProyectoViewModel, UseMiProyectoResult } from '../domain/types';
 import { fetchMiProyectoData } from '../integration/miProyectoRepository';
 
 const INITIAL_VIEW_MODEL: MiProyectoViewModel = {
@@ -63,6 +63,7 @@ const INITIAL_VIEW_MODEL: MiProyectoViewModel = {
 export function useMiProyecto(): UseMiProyectoResult {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [data, setData] = useState<MiProyectoViewModel>(INITIAL_VIEW_MODEL);
+  const isMountedRef = useRef<boolean>(true);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -75,14 +76,17 @@ export function useMiProyecto(): UseMiProyectoResult {
         readErrorsCount,
       } = await fetchMiProyectoData();
 
-      const { rawProgress, displayProgress } = calculateProgress(
+      const { rawProgressPercentage, progressPercentage } = calculateProgress(
         ideaSummary,
         financeSummary,
         quizSummary,
         retosSummary
       );
 
-      const globalStatus = determineGlobalStatus(rawProgress, readErrorsCount);
+      const globalStatus = determineGlobalStatus(
+        rawProgressPercentage,
+        readErrorsCount
+      );
 
       const lastUpdatedAt = getLatestIsoDate([
         ideaSummary.updatedAt,
@@ -93,7 +97,7 @@ export function useMiProyecto(): UseMiProyectoResult {
       ]);
 
       const nextAction = determineNextAction(
-        rawProgress,
+        rawProgressPercentage,
         globalStatus,
         ideaSummary,
         financeSummary,
@@ -101,30 +105,47 @@ export function useMiProyecto(): UseMiProyectoResult {
         retosSummary
       );
 
-      setData({
-        globalStatus,
-        progressPercentage: displayProgress,
-        rawProgressPercentage: rawProgress,
-        lastUpdatedAt,
-        nextAction,
-        idea: ideaSummary,
-        finance: financeSummary,
-        quiz: quizSummary,
-        retos: retosSummary,
-      });
+      if (isMountedRef.current) {
+        setData({
+          globalStatus,
+          progressPercentage,
+          rawProgressPercentage,
+          lastUpdatedAt,
+          nextAction,
+          idea: ideaSummary,
+          finance: financeSummary,
+          quiz: quizSummary,
+          retos: retosSummary,
+        });
+      }
     } catch {
-      setData((prev) => ({
-        ...prev,
-        globalStatus: 'total_error',
-      }));
+      if (isMountedRef.current) {
+        setData((prev) => ({
+          ...prev,
+          globalStatus: 'total_error',
+          nextAction: {
+            type: 'create_idea',
+            title: 'No pudimos cargar tu avance.',
+            message: 'Intenta de nuevo; no eliminaremos tu información.',
+            actionText: 'Reintentar',
+            route: null,
+          },
+        }));
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
+      isMountedRef.current = true;
       loadData();
+      return () => {
+        isMountedRef.current = false;
+      };
     }, [loadData])
   );
 

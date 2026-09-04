@@ -1,17 +1,30 @@
 export type {
-  BlockStatus,
   ChallengeId,
-  ChallengeStatus,
-  FinanceSummary,
-  GlobalStatus,
-  IdeaSummary,
+  ChallengeProjectItem,
+  ChallengesProjectSummary,
+  FinanceProjectSummary,
+  IdeaProjectSummary,
   MiProyectoViewModel,
-  NextAction,
-  NextActionType,
-  QuizSummary,
-  RetoItemSummary,
-  RetosSummary,
+  ProjectBlockStatus,
+  ProjectGlobalStatus,
+  ProjectNextAction,
+  ProjectNextActionType,
+  QuizProjectSummary,
   UseMiProyectoResult,
 } from './domain/types';
 
+export {
+  calculateProgress,
+  determineGlobalStatus,
+  determineNextAction,
+  getLatestIsoDate,
+  isValidIsoDate,
+} from './domain/projectSummary';
+
+export { fetchMiProyectoData } from './integration/miProyectoRepository';
+
 export { useMiProyecto } from './hooks/useMiProyecto';
+
+export { NextActionCard } from './components/NextActionCard';
+export { ProjectProgressCard } from './components/ProjectProgressCard';
+export { ProjectSectionCard } from './components/ProjectSectionCard';

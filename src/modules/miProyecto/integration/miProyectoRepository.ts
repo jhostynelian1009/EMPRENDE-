@@ -1,40 +1,27 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { IDEA_STORAGE_KEY } from '../../miIdea/domain/types';
-import { isBusinessIdeaSnapshot } from '../../miIdea/domain/validation';
-import { QuizState } from '../../quiz/types';
+import { loadCalculatorSnapshot } from '@/src/modules/calculadora';
+import { loadBusinessIdea } from '@/src/modules/miIdea';
+import { loadQuizSnapshot } from '@/src/modules/quiz';
+import { loadChallengesSnapshot } from '@/src/modules/retos';
 import {
-  CalculatorSnapshot,
-  ChallengeId,
-  ChallengesSnapshot,
-  FinanceSummary,
-  IdeaSummary,
-  QuizSummary,
-  RetoItemSummary,
-  RetosSummary,
+  ChallengeProjectItem,
+  ChallengesProjectSummary,
+  FinanceProjectSummary,
+  IdeaProjectSummary,
+  QuizProjectSummary,
 } from '../domain/types';
-import {
-  isCalculatorSnapshot,
-  isChallengesSnapshot,
-  isQuizSnapshot,
-  isValidIsoDate,
-} from '../domain/validation';
-
-export const CALCULATOR_STORAGE_KEY = '@emprende_plus:calculadora';
-export const QUIZ_STORAGE_KEY = '@emprende_plus:quiz';
-export const RETOS_STORAGE_KEY = '@emprende_plus:retos';
 
 const BLOCK_ERROR_MESSAGE =
   'No pudimos leer esta sección. Puedes volver a completarla sin perder los demás avances.';
 
 export type ModuleFetchResult = {
-  ideaSummary: IdeaSummary;
-  financeSummary: FinanceSummary;
-  quizSummary: QuizSummary;
-  retosSummary: RetosSummary;
+  ideaSummary: IdeaProjectSummary;
+  financeSummary: FinanceProjectSummary;
+  quizSummary: QuizProjectSummary;
+  retosSummary: ChallengesProjectSummary;
   readErrorsCount: number;
 };
 
-function createIdeaError(): IdeaSummary {
+function createIdeaError(): IdeaProjectSummary {
   return {
     status: 'error',
     nombreNegocio: null,
@@ -47,7 +34,7 @@ function createIdeaError(): IdeaSummary {
   };
 }
 
-function createFinanceError(): FinanceSummary {
+function createFinanceError(): FinanceProjectSummary {
   return {
     status: 'error',
     inversionInicial: null,
@@ -60,7 +47,7 @@ function createFinanceError(): FinanceSummary {
   };
 }
 
-function createQuizError(): QuizSummary {
+function createQuizError(): QuizProjectSummary {
   return {
     status: 'error',
     isCompleted: false,
@@ -72,7 +59,7 @@ function createQuizError(): QuizSummary {
   };
 }
 
-function createRetosError(): RetosSummary {
+function createRetosError(): ChallengesProjectSummary {
   return {
     status: 'error',
     completedCount: 0,
@@ -87,215 +74,156 @@ function createRetosError(): RetosSummary {
   };
 }
 
-function parseIdea(rawValue: string | null): IdeaSummary {
-  if (rawValue === null) {
-    return {
-      status: 'empty',
-      nombreNegocio: null,
-      problema: null,
-      solucion: null,
-      publicoObjetivo: null,
-      recursosNecesarios: null,
-      updatedAt: null,
-    };
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(rawValue);
-    if (!isBusinessIdeaSnapshot(parsed)) {
-      return createIdeaError();
-    }
-
-    const snapshot = parsed as Record<string, unknown>;
-    if (!isValidIsoDate(snapshot.updatedAt)) {
-      return createIdeaError();
-    }
-
-    return {
-      status: 'valid',
-      nombreNegocio: String(snapshot.nombreNegocio),
-      problema: String(snapshot.problema),
-      solucion: String(snapshot.solucion),
-      publicoObjetivo: String(snapshot.publicoObjetivo),
-      recursosNecesarios: String(snapshot.recursosNecesarios),
-      updatedAt: snapshot.updatedAt,
-    };
-  } catch {
-    return createIdeaError();
-  }
-}
-
-function parseFinance(rawValue: string | null): FinanceSummary {
-  if (rawValue === null) {
-    return {
-      status: 'empty',
-      inversionInicial: null,
-      costoTotal: null,
-      precioSugerido: null,
-      gananciaOperativa: null,
-      resultadoInicial: null,
-      updatedAt: null,
-    };
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(rawValue);
-    if (!isCalculatorSnapshot(parsed) || !isValidIsoDate(parsed.updatedAt)) {
-      return createFinanceError();
-    }
-
-    const calc = parsed as CalculatorSnapshot;
-    return {
-      status: 'valid',
-      inversionInicial: calc.inputs.inversionInicial,
-      costoTotal: calc.results.costoTotal,
-      precioSugerido: calc.results.precioSugerido,
-      gananciaOperativa: calc.results.gananciaOperativa,
-      resultadoInicial: calc.results.resultadoInicial,
-      updatedAt: calc.updatedAt,
-    };
-  } catch {
-    return createFinanceError();
-  }
-}
-
-function parseQuiz(rawValue: string | null): QuizSummary {
-  if (rawValue === null) {
-    return {
-      status: 'empty',
-      isCompleted: false,
-      score: null,
-      approved: null,
-      completedAt: null,
-      updatedAt: null,
-    };
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(rawValue);
-    if (!isQuizSnapshot(parsed)) {
-      return createQuizError();
-    }
-
-    const quiz = parsed as QuizState;
-    return {
-      status: 'valid',
-      isCompleted: quiz.status === 'completed',
-      score: quiz.score,
-      approved: quiz.approved,
-      completedAt: quiz.completedAt,
-      updatedAt: quiz.updatedAt,
-    };
-  } catch {
-    return createQuizError();
-  }
-}
-
-function parseRetos(rawValue: string | null): RetosSummary {
-  const defaultChallenges: RetoItemSummary[] = [
-    { id: 'reto-1', status: 'pending', updatedAt: null },
-    { id: 'reto-2', status: 'pending', updatedAt: null },
-    { id: 'reto-3', status: 'pending', updatedAt: null },
-  ];
-
-  if (rawValue === null) {
-    return {
-      status: 'empty',
-      completedCount: 0,
-      totalCount: 3,
-      challenges: defaultChallenges,
-      updatedAt: null,
-    };
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(rawValue);
-    if (!isChallengesSnapshot(parsed)) {
-      return createRetosError();
-    }
-
-    const snapshot = parsed as ChallengesSnapshot;
-    const challengeIds: ChallengeId[] = ['reto-1', 'reto-2', 'reto-3'];
-    let completedCount = 0;
-
-    const challenges: RetoItemSummary[] = challengeIds.map((id) => {
-      const item = snapshot.challenges?.[id];
-      const status = item?.status === 'completed' ? 'completed' : item?.status === 'started' ? 'started' : 'pending';
-      if (status === 'completed') {
-        completedCount++;
-      }
-      return {
-        id,
-        status,
-        updatedAt: item?.updatedAt ?? null,
-      };
-    });
-
-    return {
-      status: 'valid',
-      completedCount,
-      totalCount: 3,
-      challenges,
-      updatedAt: snapshot.updatedAt,
-    };
-  } catch {
-    return createRetosError();
-  }
-}
-
 export async function fetchMiProyectoData(): Promise<ModuleFetchResult> {
-  const [ideaResult, financeResult, quizResult, retosResult] = await Promise.allSettled([
-    AsyncStorage.getItem(IDEA_STORAGE_KEY),
-    AsyncStorage.getItem(CALCULATOR_STORAGE_KEY),
-    AsyncStorage.getItem(QUIZ_STORAGE_KEY),
-    AsyncStorage.getItem(RETOS_STORAGE_KEY),
+  const [ideaRes, calcRes, quizRes, retosRes] = await Promise.allSettled([
+    loadBusinessIdea(),
+    loadCalculatorSnapshot(),
+    loadQuizSnapshot(),
+    loadChallengesSnapshot(),
   ]);
 
-  let readErrorsCount = 0;
-
-  let ideaSummary: IdeaSummary;
-  if (ideaResult.status === 'rejected') {
-    readErrorsCount++;
+  let ideaSummary: IdeaProjectSummary;
+  if (ideaRes.status === 'fulfilled') {
+    const res = ideaRes.value;
+    if (res.status === 'valid') {
+      ideaSummary = {
+        status: 'valid',
+        nombreNegocio: res.data.nombreNegocio,
+        problema: res.data.problema,
+        solucion: res.data.solucion,
+        publicoObjetivo: res.data.publicoObjetivo,
+        recursosNecesarios: res.data.recursosNecesarios,
+        updatedAt: res.data.updatedAt,
+      };
+    } else if (res.status === 'empty') {
+      ideaSummary = {
+        status: 'empty',
+        nombreNegocio: null,
+        problema: null,
+        solucion: null,
+        publicoObjetivo: null,
+        recursosNecesarios: null,
+        updatedAt: null,
+      };
+    } else {
+      ideaSummary = createIdeaError();
+    }
+  } else {
     ideaSummary = createIdeaError();
-  } else {
-    ideaSummary = parseIdea(ideaResult.value);
-    if (ideaSummary.status === 'error') {
-      readErrorsCount++;
-    }
   }
 
-  let financeSummary: FinanceSummary;
-  if (financeResult.status === 'rejected') {
-    readErrorsCount++;
+  let financeSummary: FinanceProjectSummary;
+  if (calcRes.status === 'fulfilled') {
+    const res = calcRes.value;
+    if (res.status === 'ready') {
+      financeSummary = {
+        status: 'valid',
+        inversionInicial: res.snapshot.inputs.inversionInicial,
+        costoTotal: res.snapshot.results.costoTotal,
+        precioSugerido: res.snapshot.results.precioSugerido,
+        gananciaOperativa: res.snapshot.results.gananciaOperativa,
+        resultadoInicial: res.snapshot.results.resultadoInicial,
+        updatedAt: res.snapshot.updatedAt,
+      };
+    } else if (res.status === 'empty') {
+      financeSummary = {
+        status: 'empty',
+        inversionInicial: null,
+        costoTotal: null,
+        precioSugerido: null,
+        gananciaOperativa: null,
+        resultadoInicial: null,
+        updatedAt: null,
+      };
+    } else {
+      financeSummary = createFinanceError();
+    }
+  } else {
     financeSummary = createFinanceError();
-  } else {
-    financeSummary = parseFinance(financeResult.value);
-    if (financeSummary.status === 'error') {
-      readErrorsCount++;
-    }
   }
 
-  let quizSummary: QuizSummary;
-  if (quizResult.status === 'rejected') {
-    readErrorsCount++;
+  let quizSummary: QuizProjectSummary;
+  if (quizRes.status === 'fulfilled') {
+    const res = quizRes.value;
+    if (res.status === 'valid') {
+      quizSummary = {
+        status: 'valid',
+        isCompleted: res.snapshot.status === 'completed',
+        score: res.snapshot.score,
+        approved: res.snapshot.approved,
+        completedAt: res.snapshot.completedAt,
+        updatedAt: res.snapshot.updatedAt,
+      };
+    } else if (res.status === 'empty') {
+      quizSummary = {
+        status: 'empty',
+        isCompleted: false,
+        score: null,
+        approved: null,
+        completedAt: null,
+        updatedAt: null,
+      };
+    } else {
+      quizSummary = createQuizError();
+    }
+  } else {
     quizSummary = createQuizError();
-  } else {
-    quizSummary = parseQuiz(quizResult.value);
-    if (quizSummary.status === 'error') {
-      readErrorsCount++;
-    }
   }
 
-  let retosSummary: RetosSummary;
-  if (retosResult.status === 'rejected') {
-    readErrorsCount++;
-    retosSummary = createRetosError();
-  } else {
-    retosSummary = parseRetos(retosResult.value);
-    if (retosSummary.status === 'error') {
-      readErrorsCount++;
+  let retosSummary: ChallengesProjectSummary;
+  if (retosRes.status === 'fulfilled') {
+    const res = retosRes.value;
+    if (res.status === 'ready' && res.snapshot) {
+      const snapshot = res.snapshot;
+      const items: ChallengeProjectItem[] = [
+        {
+          id: 'reto-1',
+          status: snapshot.challenges['reto-1']?.status ?? 'pending',
+          updatedAt: snapshot.challenges['reto-1']?.updatedAt ?? null,
+        },
+        {
+          id: 'reto-2',
+          status: snapshot.challenges['reto-2']?.status ?? 'pending',
+          updatedAt: snapshot.challenges['reto-2']?.updatedAt ?? null,
+        },
+        {
+          id: 'reto-3',
+          status: snapshot.challenges['reto-3']?.status ?? 'pending',
+          updatedAt: snapshot.challenges['reto-3']?.updatedAt ?? null,
+        },
+      ];
+      const completedCount = items.filter((i) => i.status === 'completed').length;
+      retosSummary = {
+        status: 'valid',
+        completedCount,
+        totalCount: 3,
+        challenges: items,
+        updatedAt: snapshot.updatedAt,
+      };
+    } else if (res.status === 'empty') {
+      retosSummary = {
+        status: 'empty',
+        completedCount: 0,
+        totalCount: 3,
+        challenges: [
+          { id: 'reto-1', status: 'pending', updatedAt: null },
+          { id: 'reto-2', status: 'pending', updatedAt: null },
+          { id: 'reto-3', status: 'pending', updatedAt: null },
+        ],
+        updatedAt: null,
+      };
+    } else {
+      retosSummary = createRetosError();
     }
+  } else {
+    retosSummary = createRetosError();
   }
+
+  let readErrorsCount = 0;
+  if (ideaSummary.status === 'error') readErrorsCount++;
+  if (financeSummary.status === 'error') readErrorsCount++;
+  if (quizSummary.status === 'error') readErrorsCount++;
+  if (retosSummary.status === 'error') readErrorsCount++;
 
   return {
     ideaSummary,
