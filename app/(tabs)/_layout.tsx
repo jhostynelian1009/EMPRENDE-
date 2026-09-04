@@ -54,11 +54,28 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/*Nota: Las rutas 'retos' y 'proyecto' aún no cuentan con su archivo de pantalla en este branch. Para evitar advertencias de Expo Router (Screen 'retos' does not exist), no se declaran Tabs.Screen falsas hasta que sus correspondientes ramas/módulos se integren en develop. Las tarjetas de Inicio muestran 'Pendiente de integración'.*/}
+      <Tabs.Screen
+        name="retos"
+        options={{
+          title: 'Retos',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol size={size || 24} name="flag.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="proyecto"
+        options={{
+          title: 'Mi Proyecto',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol size={size || 24} name="folder.fill" color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="explore"
         options={{
-          href: null, // Oculta la plantilla por defecto si existe
+          href: null,
         }}
       />
     </Tabs>

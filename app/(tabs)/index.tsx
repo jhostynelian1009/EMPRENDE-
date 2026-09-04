@@ -18,12 +18,62 @@ import {
 } from '@/src/components/ui';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
-// Módulos existentes con exportaciones públicas
+// Módulos e integración con APIs públicas de datos
 import { useAprende } from '@/src/modules/aprende/hooks/useAprende';
 import { LESSONS } from '@/src/modules/aprende/data/content';
-import { getBusinessIdea } from '@/src/modules/miIdea/data/repository';
-import { loadQuizState } from '@/src/modules/quiz/repository';
-import type { QuizState } from '@/src/modules/quiz/types';
+import {
+  fetchMiProyectoData,
+  calculateProgress,
+} from '@/src/modules/miProyecto';
+import type {
+  IdeaProjectSummary,
+  FinanceProjectSummary,
+  QuizProjectSummary,
+  ChallengesProjectSummary,
+} from '@/src/modules/miProyecto';
+
+interface DashboardState {
+  ideaSummary: IdeaProjectSummary;
+  financeSummary: FinanceProjectSummary;
+  quizSummary: QuizProjectSummary;
+  retosSummary: ChallengesProjectSummary;
+}
+
+const INITIAL_DASHBOARD_STATE: DashboardState = {
+  ideaSummary: {
+    status: 'empty',
+    nombreNegocio: null,
+    problema: null,
+    solucion: null,
+    publicoObjetivo: null,
+    recursosNecesarios: null,
+    updatedAt: null,
+  },
+  financeSummary: {
+    status: 'empty',
+    inversionInicial: null,
+    costoTotal: null,
+    precioSugerido: null,
+    gananciaOperativa: null,
+    resultadoInicial: null,
+    updatedAt: null,
+  },
+  quizSummary: {
+    status: 'empty',
+    isCompleted: false,
+    score: null,
+    approved: null,
+    completedAt: null,
+    updatedAt: null,
+  },
+  retosSummary: {
+    status: 'empty',
+    completedCount: 0,
+    totalCount: 3,
+    challenges: [],
+    updatedAt: null,
+  },
+};
 
 export default function HomeScreen() {
   const {
@@ -34,31 +84,26 @@ export default function HomeScreen() {
     isLessonCompleted,
   } = useAprende();
 
-  const [ideaSaved, setIdeaSaved] = useState(false);
-  const [quizState, setQuizState] = useState<QuizState | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [dashboardData, setDashboardData] =
+    useState<DashboardState>(INITIAL_DASHBOARD_STATE);
 
-  // Carga de estados locales de los otros módulos existentes
+  // Carga asíncrona de estados locales consumiendo APIs públicas mediante la capa de agregación de Mi Proyecto
   const loadDashboardData = useCallback(async () => {
+    setIsLoading(true);
     refreshProgress();
     try {
-      const idea = await getBusinessIdea();
-      setIdeaSaved(
-        !!(
-          idea &&
-          idea.nombreNegocio.trim() &&
-          idea.problema.trim() &&
-          idea.solucion.trim()
-        )
-      );
+      const data = await fetchMiProyectoData();
+      setDashboardData({
+        ideaSummary: data.ideaSummary,
+        financeSummary: data.financeSummary,
+        quizSummary: data.quizSummary,
+        retosSummary: data.retosSummary,
+      });
     } catch {
-      setIdeaSaved(false);
-    }
-
-    try {
-      const quiz = await loadQuizState();
-      setQuizState(quiz);
-    } catch {
-      setQuizState(null);
+      // Ante un fallo imprevisto, se conserva el estado seguro por defecto
+    } finally {
+      setIsLoading(false);
     }
   }, [refreshProgress]);
 
@@ -68,40 +113,70 @@ export default function HomeScreen() {
     }, [loadDashboardData])
   );
 
+  const { ideaSummary, financeSummary, quizSummary, retosSummary } =
+    dashboardData;
+
+  const ideaSaved = ideaSummary.status === 'valid';
+  const calcSaved = financeSummary.status === 'valid';
+
+  const quizCompleted =
+    quizSummary.status === 'valid' && quizSummary.isCompleted;
+  const quizApproved = quizCompleted && quizSummary.approved === true;
+
+  const retosCompletedCount =
+    retosSummary.status === 'valid' ? retosSummary.completedCount : 0;
+
+  const { progressPercentage } = calculateProgress(
+    ideaSummary,
+    financeSummary,
+    quizSummary,
+    retosSummary
+  );
+
   // Lección recomendada para "Continúa aprendiendo"
   const pendingLesson =
     LESSONS.find((l) => !isLessonCompleted(l.id as any)) || LESSONS[0];
 
-  // Algoritmo de "Siguiente paso" según spec/01-design/02-navigation-home.md
-  const quizCompleted = quizState?.status === 'completed';
-
+  // Algoritmo de "Siguiente paso" según especificación educativa
   const getNextStep = () => {
-    // 1. Si Mi Idea está vacía
+    // 1. Si no existe Mi Idea válida
     if (!ideaSaved) {
       return {
         title: 'Describe tu idea de negocio',
         description:
           'Define la necesidad, la solución y el público objetivo de tu propuesta.',
         actionTitle: 'Ir a Mi Idea',
-        onPress: () => router.push('/mi-idea'),
+        onPress: () => router.push('/(tabs)/mi-idea'),
         iconName: 'lightbulb.fill' as const,
-        disabled: false,
       };
     }
-    // 2. Si Mi Idea existe y Aprende tiene contenido pendiente
+    // 2. Si quedan lecciones pendientes en Aprende
     if (completedCount < totalLessons) {
       return {
-        title: completedCount === 0 ? 'Comienza con la lección Emprendimiento' : 'Continúa aprendiendo',
+        title:
+          completedCount === 0
+            ? 'Comienza con la lección Emprendimiento'
+            : 'Continúa aprendiendo',
         description:
           'Aprende los conceptos clave para iniciar tu negocio con bases sólidas.',
         actionTitle: 'Ir a Aprende',
-        onPress: () => router.push('/aprende'),
+        onPress: () => router.push('/(tabs)/aprende'),
         iconName: 'book.fill' as const,
-        disabled: false,
       };
     }
-    // 3. Si corresponde completar el Quiz y su estado está disponible
-    if (quizState && (!quizCompleted || !quizState.approved)) {
+    // 3. Si no existe cálculo válido en Calculadora
+    if (!calcSaved) {
+      return {
+        title: 'Ponle números a tu idea',
+        description:
+          'Calcula la inversión inicial, los costos y el precio sugerido para tu producto o servicio.',
+        actionTitle: 'Ir a Calculadora',
+        onPress: () => router.push('/calculadora'),
+        iconName: 'number.circle.fill' as const,
+      };
+    }
+    // 4. Si el Quiz no está completado o aprobado
+    if (!quizCompleted || !quizApproved) {
       return {
         title: 'Comprueba lo aprendido',
         description:
@@ -109,26 +184,56 @@ export default function HomeScreen() {
         actionTitle: 'Ir al Quiz',
         onPress: () => router.push('/quiz'),
         iconName: 'checkmark.seal.fill' as const,
-        disabled: false,
       };
     }
-    // 4. Módulos faltantes (Calculadora, Retos, Proyecto no integrados)
+    // 5. Si quedan Retos sin completar
+    if (retosCompletedCount < 3) {
+      return {
+        title: 'Continúa tus retos',
+        description:
+          'Completa los 3 desafíos prácticos para fortalecer tu plan de negocio.',
+        actionTitle: 'Ir a Retos',
+        onPress: () => router.push('/(tabs)/retos'),
+        iconName: 'flag.fill' as const,
+      };
+    }
+    // 6. Cuando los módulos anteriores estén completos
     return {
-      title: 'Módulos pendientes de integración',
+      title: 'Revisa tu proyecto antes de presentarlo',
       description:
-        'Has completado los módulos actuales. Los siguientes estarán disponibles pronto.',
-      actionTitle: 'Próximamente',
-      onPress: () => {},
-      iconName: 'clock.fill' as const,
-      disabled: true,
+        '¡Felicitaciones! Has completado todos los módulos. Revisa el resumen consolidado de tu proyecto.',
+      actionTitle: 'Ver Mi Proyecto',
+      onPress: () => router.push('/(tabs)/proyecto'),
+      iconName: 'folder.fill' as const,
     };
   };
 
   const nextStep = getNextStep();
 
+  // Estados visuales específicos para la tarjeta de Quiz
+  const getQuizCardStatus = () => {
+    if (quizSummary.status === 'valid') {
+      if (quizSummary.isCompleted) {
+        return quizSummary.approved ? 'approved' : 'failed';
+      }
+      return 'started';
+    }
+    return 'pending';
+  };
+
+  const getQuizCardLabel = () => {
+    if (quizSummary.status === 'valid') {
+      if (quizSummary.isCompleted) {
+        return quizSummary.approved ? 'Aprobado' : 'No aprobado';
+      }
+      return 'En progreso';
+    }
+    return 'Pendiente';
+  };
+
   return (
     <Screen scrollable accessibilityLabel="Pantalla de Inicio de EMPRENDE+">
-      {/* 1. Header con marca tipográfica temporal y bienvenida */}
+      {/* 1. Header con marca tipográfica y bienvenida */}
       <View style={styles.headerContainer}>
         <View style={styles.brandContainer}>
           <Text style={styles.brandNavy}>EMPRENDE</Text>
@@ -152,7 +257,7 @@ export default function HomeScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.carouselContent}
-          snapToInterval={262} // Ancho tarjeta + gap
+          snapToInterval={262}
           decelerationRate="fast"
         >
           {/* 1. Aprende */}
@@ -160,10 +265,16 @@ export default function HomeScreen() {
             title="Aprende"
             description="Conceptos esenciales para tu emprendimiento"
             iconName="book.fill"
-            status={completedCount > 0 ? 'started' : 'pending'}
+            status={
+              completedCount === totalLessons
+                ? 'completed'
+                : completedCount > 0
+                ? 'started'
+                : 'pending'
+            }
             statusLabel={`${completedCount} de ${totalLessons} lecciones`}
-            actionTitle="Ver lecciones"
-            onPress={() => router.push('/aprende')}
+            actionTitle={completedCount > 0 ? 'Continuar' : 'Ver lecciones'}
+            onPress={() => router.push('/(tabs)/aprende')}
           />
 
           {/* 2. Mi Idea */}
@@ -174,19 +285,18 @@ export default function HomeScreen() {
             status={ideaSaved ? 'completed' : 'pending'}
             statusLabel={ideaSaved ? 'Idea guardada' : 'Sin iniciar'}
             actionTitle={ideaSaved ? 'Editar idea' : 'Crear idea'}
-            onPress={() => router.push('/mi-idea')}
+            onPress={() => router.push('/(tabs)/mi-idea')}
           />
 
-          {/* 3. Calculadora (Pendiente de integración) */}
+          {/* 3. Calculadora */}
           <ModuleCard
             title="Calculadora"
             description="Calcula costos, margen y precio sugerido"
             iconName="number.circle.fill"
-            status="pending_integration"
-            statusLabel="Pendiente de integración"
-            actionTitle="No disponible"
-            onPress={() => {}}
-            disabled
+            status={calcSaved ? 'completed' : 'pending'}
+            statusLabel={calcSaved ? 'Cálculo guardado' : 'Sin calcular'}
+            actionTitle={calcSaved ? 'Revisar' : 'Calcular'}
+            onPress={() => router.push('/calculadora')}
           />
 
           {/* 4. Quiz */}
@@ -194,50 +304,50 @@ export default function HomeScreen() {
             title="Quiz"
             description="Cuestionario de 10 preguntas con retroalimentación"
             iconName="checkmark.seal.fill"
-            status={
-              quizState?.status === 'completed'
-                ? quizState.approved
-                  ? 'approved'
-                  : 'completed'
-                : 'pending'
-            }
-            statusLabel={
-              quizState?.status === 'completed'
-                ? quizState.approved
-                  ? 'Aprobado'
-                  : 'Completado'
-                : 'Pendiente'
-            }
+            status={getQuizCardStatus()}
+            statusLabel={getQuizCardLabel()}
             actionTitle={
-              quizState?.status === 'completed'
+              quizSummary.status === 'valid' && quizSummary.isCompleted
                 ? 'Repetir quiz'
                 : 'Realizar quiz'
             }
             onPress={() => router.push('/quiz')}
           />
 
-          {/* 5. Retos (Pendiente de integración) */}
+          {/* 5. Retos */}
           <ModuleCard
             title="Retos"
             description="3 desafíos prácticos para tu proyecto"
             iconName="flag.fill"
-            status="pending_integration"
-            statusLabel="Pendiente de integración"
-            actionTitle="No disponible"
-            onPress={() => {}}
-            disabled
+            status={
+              retosCompletedCount === 3
+                ? 'completed'
+                : retosCompletedCount > 0
+                ? 'started'
+                : 'pending'
+            }
+            statusLabel={`${retosCompletedCount} de 3 retos`}
+            actionTitle={retosCompletedCount > 0 ? 'Continuar' : 'Comenzar'}
+            onPress={() => router.push('/(tabs)/retos')}
           />
 
-          {/* 6. Mi Proyecto (Pendiente de integración) */}
+          {/* 6. Mi Proyecto */}
           <ModuleCard
             title="Mi Proyecto"
             description="Resumen consolidado de tu progreso general"
             iconName="folder.fill"
-            status="pending_integration"
-            statusLabel="Pendiente de integración"
-            actionTitle="No disponible"
-            onPress={() => {}}
-            disabled
+            status={
+              progressPercentage === 100
+                ? 'completed'
+                : progressPercentage > 0
+                ? 'started'
+                : 'pending'
+            }
+            statusLabel={
+              isLoading ? 'Ver resumen' : `${progressPercentage}% completado`
+            }
+            actionTitle="Ver proyecto"
+            onPress={() => router.push('/(tabs)/proyecto')}
           />
         </ScrollView>
       </View>
@@ -307,13 +417,11 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {!nextStep.disabled && (
-            <PrimaryButton
-              title={nextStep.actionTitle}
-              onPress={nextStep.onPress}
-              style={styles.nextStepButton}
-            />
-          )}
+          <PrimaryButton
+            title={nextStep.actionTitle}
+            onPress={nextStep.onPress}
+            style={styles.nextStepButton}
+          />
         </ContentCard>
       </View>
 
